@@ -18,6 +18,8 @@ find_package(up-core-api REQUIRED)
 find_package(up-cpp REQUIRED)
 find_package(zenohc REQUIRED)
 find_package(zenohcxx REQUIRED zenohc::lib)
+find_package(GTest REQUIRED)
+include(GoogleTest)
 
 # TODO NEEDED?
 #add_definitions(-DSPDLOG_FMT_EXTERNAL)
@@ -58,6 +60,7 @@ target_link_libraries(${PROJECT_NAME}
 	up-cpp::up-cpp
 	up-core-api::up-core-api
 	protobuf::libprotobuf
+	GTest::gtest_main
 	spdlog::spdlog)
 
 enable_testing()
