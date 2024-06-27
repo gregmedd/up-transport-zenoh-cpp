@@ -72,7 +72,7 @@ TEST_F(TestZenohUTransport, ConstructDestroy) {
 
 struct ExposeKeyString : public ZenohUTransport {
 	template<typename... Args>
-	auto toZenohKeyString(Args&&... args) {
+	static auto toZenohKeyString(Args&&... args) {
 		return ZenohUTransport::toZenohKeyString(std::forward<Args>(args)...);
 	}
 };
