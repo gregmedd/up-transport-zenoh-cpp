@@ -12,7 +12,6 @@
 #ifndef UP_TRANSPORT_ZENOH_CPP_ZENOHUTRANSPORT_H
 #define UP_TRANSPORT_ZENOH_CPP_ZENOHUTRANSPORT_H
 
-#include <gtest/gtest.h>
 #include <up-cpp/transport/UTransport.h>
 
 #include <filesystem>
@@ -145,14 +144,12 @@ protected:
 	/// @param listener shared_ptr of the Connection that has been broken.
 	virtual void cleanupListener(CallableConn listener) override;
 
-private:
-	FRIEND_TEST(TestZenohUTransport, toZenohKeyString);
-
-	static v1::UStatus uError(v1::UCode code, std::string_view message);
-
 	static std::string toZenohKeyString(
 	    const std::string& default_authority_name, const v1::UUri& source,
 	    const std::optional<v1::UUri>& sink);
+
+private:
+	static v1::UStatus uError(v1::UCode code, std::string_view message);
 
 	static std::vector<std::pair<std::string, std::string>>
 	uattributesToAttachment(const v1::UAttributes& attributes);
