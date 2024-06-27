@@ -18,6 +18,8 @@
 #include <mutex>
 #include <optional>
 #include <unordered_map>
+
+#define ZENOHCXX_ZENOHC
 #include <zenoh.hxx>
 
 namespace zenohc {
