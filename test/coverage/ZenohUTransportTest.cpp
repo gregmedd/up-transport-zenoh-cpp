@@ -13,8 +13,6 @@
 #include <up-cpp/datamodel/builder/Uuid.h>
 #include <up-cpp/datamodel/validator/UUri.h>
 
-#include <zenoh.hxx>
-
 #include "up-transport-zenoh-cpp/ZenohUTransport.h"
 
 namespace uprotocol::transport {
@@ -77,10 +75,10 @@ struct ExposeKeyString : public ZenohUTransport {
 	auto toZenohKeyString(Args&&... args) {
 		return ZenohUTransport::toZenohKeyString(std::forward<Args>(args)...);
 	}
-}
+};
 
 TEST_F(TestZenohUTransport, toZenohKeyString) {
-	EXPECT_TRUE(std::is_base_of_v<ZenohUTransport, ExposeKeyString>);
+	EXPECT_TRUE((std::is_base_of_v<ZenohUTransport, ExposeKeyString>));
 
 	EXPECT_EQ(
 	    ExposeKeyString::toZenohKeyString(
