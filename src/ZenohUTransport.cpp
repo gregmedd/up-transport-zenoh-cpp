@@ -151,14 +151,12 @@ Priority ZenohUTransport::mapZenohPriority(UPriority upriority) {
 }
 
 UMessage ZenohUTransport::sampleToUMessage(const Sample& sample) {
-	UAttributes attributes;
+	UMessage message;
 	if (sample.get_attachment().check()) {
-		attributes = attachmentToUAttributes(sample.get_attachment());
+		*message.mutable_attributes() = attachmentToUAttributes(sample.get_attachment());
 	}
 	std::string payload(sample.get_payload().as_string_view());
-	UMessage message;
 	message.set_payload(payload);
-	message.set_allocated_attributes(&attributes);
 
 	return message;
 }
@@ -200,7 +198,7 @@ UStatus ZenohUTransport::registerResponseListener_(const std::string& zenoh_key,
 
 UStatus ZenohUTransport::registerPublishNotificationListener_(
     const std::string& zenoh_key, CallableConn listener) {
-	auto data_handler = [&](const Sample& sample) {
+	auto data_handler = [this, listener](const Sample& sample) mutable {
 		listener(sampleToUMessage(sample));
 		// invoke_nonblock_callback(&cb_sender, &listener_cloned, Ok(msg));
 	};
@@ -295,55 +293,34 @@ UStatus ZenohUTransport::sendPublishNotification_(
 	return UStatus();
 }
 
+// NOTE: Messages have already been validated by the base class. It does not
+// need to be re-checked here.
 v1::UStatus ZenohUTransport::sendImpl(const UMessage& message) {
-	if (!message.has_payload()) {
-		return uError(UCode::INVALID_ARGUMENT, "Invalid UPayload");
-	}
 	const auto& payload = message.payload();
 
 	const auto& attributes = message.attributes();
-	if (attributes.type() == UMessageType::UMESSAGE_TYPE_UNSPECIFIED) {
-		return uError(UCode::INVALID_ARGUMENT, "Invalid UAttributes");
-	}
 
-	std::string zenoh_key =
-	    toZenohKeyString(getDefaultSource().authority_name(), attributes.sink(),
-	                     attributes.source());
+        std::string zenoh_key;
+        if (attributes.type() == UMessageType::UMESSAGE_TYPE_PUBLISH) {
+            zenoh_key =
+                toZenohKeyString(getDefaultSource().authority_name(), attributes.source(), {});
+        } else {
+            zenoh_key =
+                toZenohKeyString(getDefaultSource().authority_name(), attributes.source(),
+                                 attributes.sink());
+        }
+
 	switch (attributes.type()) {
 		case UMessageType::UMESSAGE_TYPE_PUBLISH: {
-			auto [valid, maybe_reason] =
-			    validator::message::isValidPublish(message);
-			if (!valid) {
-				return uError(UCode::INVALID_ARGUMENT,
-				              validator::message::message(*maybe_reason));
-			}
 			return sendPublishNotification_(zenoh_key, payload, attributes);
 		}
 		case UMessageType::UMESSAGE_TYPE_NOTIFICATION: {
-			auto [valid, maybe_reason] =
-			    validator::message::isValidNotification(message);
-			if (!valid) {
-				return uError(UCode::INVALID_ARGUMENT,
-				              validator::message::message(*maybe_reason));
-			}
 			return sendPublishNotification_(zenoh_key, payload, attributes);
 		}
 		case UMessageType::UMESSAGE_TYPE_REQUEST: {
-			auto [valid, maybe_reason] =
-			    validator::message::isValidRpcRequest(message);
-			if (!valid) {
-				return uError(UCode::INVALID_ARGUMENT,
-				              validator::message::message(*maybe_reason));
-			}
 			return sendRequest_(zenoh_key, payload, attributes);
 		}
 		case UMessageType::UMESSAGE_TYPE_RESPONSE: {
-			auto [valid, maybe_reason] =
-			    validator::message::isValidRpcResponse(message);
-			if (!valid) {
-				return uError(UCode::INVALID_ARGUMENT,
-				              validator::message::message(*maybe_reason));
-			}
 			return sendResponse_(payload, attributes);
 		}
 		default: {
@@ -355,19 +332,26 @@ v1::UStatus ZenohUTransport::sendImpl(const UMessage& message) {
 }
 
 v1::UStatus ZenohUTransport::registerListenerImpl(
-    const v1::UUri& sink_filter, CallableConn&& listener,
-    std::optional<v1::UUri>&& source_filter) {
+    CallableConn&& listener, const v1::UUri& source_filter,
+    std::optional<v1::UUri>&& sink_filter) {
 	std::string zenoh_key = toZenohKeyString(
-	    getDefaultSource().authority_name(), sink_filter, source_filter);
-	// TODO: Is 0 == none?
-	if (!sink_filter.authority_name().empty() && sink_filter.ue_id() == 0 &&
-	    sink_filter.resource_id() == 0) {
+	    getDefaultSource().authority_name(), source_filter, sink_filter);
+#if 0
+	if (!sink_filter) {
+#endif
 		// This is special UUri which means we need to register for all of
 		// Publish, Notification, Request, and Response RPC response
+                // TODO - this is only true because context is not available
+                // here. Any given listener will only be for one of these at
+                // a time
 		registerResponseListener_(zenoh_key, listener);
 		registerRequestListener_(zenoh_key, listener);
 		registerPublishNotificationListener_(zenoh_key, listener);
+#if 0
 	} else {
+                // TODO - These validators aren't useful here because they're
+                // for checking message attributes and not filters. Filters
+                // could have wildcards such that none of these match
 		auto [valid, maybe_reason] = validator::uri::isValid(sink_filter);
 		if (!valid) {
 			return uError(UCode::INVALID_ARGUMENT,
@@ -379,12 +363,16 @@ v1::UStatus ZenohUTransport::registerListenerImpl(
 		} else if (std::get<0>(validator::uri::isValidRpcMethod(sink_filter))) {
 			registerRequestListener_(zenoh_key, std::move(listener));
 		} else {
+                        // TODO - This is probably not  a safe default.
 			registerPublishNotificationListener_(zenoh_key,
 			                                     std::move(listener));
 		}
 	}
+#endif
 
-	return v1::UStatus();
+        v1::UStatus status;
+        status.set_code(v1::UCode::OK);
+	return status;
 }
 
 void ZenohUTransport::cleanupListener(CallableConn listener) {}
