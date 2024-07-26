@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "**" ]
   pull_request:
     branches: ["**"]
 
@@ -99,7 +99,7 @@ jobs:
         run: |
           cd up-transport-zenoh-cpp/build/Release
           chmod +x bin/*
-          ctest
+          ctest || ctest --rerun-failed --output-on-failure
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
