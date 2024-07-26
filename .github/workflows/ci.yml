@@ -58,7 +58,7 @@ jobs:
       - name: Save conan cache to archive
         shell: bash
         run: |
-          conan cache save --file ./conan-cache.tgz '*'
+          conan cache save --file ./conan-cache.tgz '*/*:*'
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
