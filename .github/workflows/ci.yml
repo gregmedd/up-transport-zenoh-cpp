@@ -15,8 +15,6 @@ jobs:
       - name: Install Conan
         id: conan
         uses: turtlebrowser/get-conan@main
-        with:
-          version: 2.3.2
 
       - name: Create default Conan profile
         run: conan profile detect
@@ -88,6 +86,23 @@ jobs:
     needs: build
 
     steps:
+      - name: Install Conan
+        id: conan
+        uses: turtlebrowser/get-conan@main
+
+      - name: Create default Conan profile
+        run: conan profile detect
+
+      - name: Get conan cache
+        uses: actions/download-artifact@v4
+        with:
+          name: conan-cache
+
+      - name: Restore conan cache from archive
+        shell: bash
+        run: |
+          conan cache restore conan-cache.tgz
+
       - name: Get build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -122,8 +137,6 @@ jobs:
       - name: Install Conan
         id: conan
         uses: turtlebrowser/get-conan@main
-        with:
-          version: 2.3.2
 
       - name: Create default Conan profile
         run: conan profile detect
