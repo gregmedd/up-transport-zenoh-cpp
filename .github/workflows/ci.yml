@@ -50,20 +50,9 @@ jobs:
         shell: bash
         run: |
           cd up-transport-zenoh-cpp
-          conan install . --build=missing
+          conan install . --deployer=full_deploy --build=missing
           cmake --preset conan-release -DCMAKE_EXPORT_COMPILE_COMMANDS=yes
-          cd build/Release
-          cmake --build . -- -j
-
-      - name: Save conan cache to archive
-        shell: bash
-        run: |
-          conan cache save --file ./conan-cache.tgz '*/*:*'
-
-      - name: HACK - Save conan folders
-        shell: bash
-        run: |
-          tar -cvzf ./conan-raw.tgz -C ~/ .conan2
+          cmake --build --preset conan-release -- -j
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -72,6 +61,7 @@ jobs:
           path: |
             up-transport-zenoh-cpp/build/Release
             up-transport-zenoh-cpp/test/*.json5
+            up-transport-zenoh-cpp/full_deploy
 
       - name: Upload compile commands
         uses: actions/upload-artifact@v4
@@ -79,17 +69,16 @@ jobs:
           name: compile-commands
           path: up-transport-zenoh-cpp/build/Release/compile_commands.json
 
+      - name: Save conan cache to archive
+        shell: bash
+        run: |
+          conan cache save --file ./conan-cache.tgz '*/*:*'
+
       - name: Upload conan cache for linting
         uses: actions/upload-artifact@v4
         with:
           name: conan-cache
           path: ./conan-cache.tgz
-
-      - name: HACK - Upload conan folders
-        uses: actions/upload-artifact@v4
-        with:
-          name: conan-raw
-          path: ./conan-raw.tgz
 
   test:
     name: Run up-transport-zenoh-cpp tests
@@ -97,18 +86,6 @@ jobs:
     needs: build
 
     steps:
-      - name: HACK - Get conan folders
-        uses: actions/download-artifact@v4
-        with:
-          name: conan-raw
-
-      - name: HACK - Restore conan folders
-        shell: bash
-        run: |
-          mv conan-raw.tgz ~/
-          cd ~/
-          tar -xvzf conan-raw.tgz
-
       - name: Get build artifacts
         uses: actions/download-artifact@v4
         with:
